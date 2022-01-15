@@ -24,7 +24,7 @@ jobs:
     - uses: actions/checkout@v2
     - run: rustup target add wasm32-unknown-unknown
     - run: cargo install trunk
-    - run: trunk build --release
+    - run: trunk build --release --public-url yew-static-pages
     - run: cp -r ./dist/ ./public/
     - uses: peaceiris/actions-gh-pages@v3
       if: ${{ github.ref == 'refs/heads/main' }}
