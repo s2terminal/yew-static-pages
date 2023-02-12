@@ -1,33 +1,75 @@
-name: Deploy
+name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 env:
-  CARGO_TERM_COLOR: always
+  CARGO_HOME: "${{ env.HOME }}/.cargo"
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-    - uses: actions/checkout@v2
-    - run: rustup target add wasm32-unknown-unknown
-    - run: cargo install trunk
-    - run: trunk build --release --public-url yew-static-pages
-    - run: cp -r ./dist/ ./public/
-    - uses: peaceiris/actions-gh-pages@v3
-      if: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./public
+        profile: minimal
+        toolchain: stable
+
+    - name: Install dependencies
+      run: |
+        rustup component add rustfmt
+        cargo install wasm-pack
+
+    - name: Build and Package
+      run: |
+        cargo build --release
+        wasm-pack build --release
+
+    - name: Deploy to Github Pages
+      uses: peaceiris/actions-gh-pages@v3
+      env:
+        GITHUB_PERSONAL_TOKEN: ${{ secrets.GITHUB_PERSONAL_TOKEN }}
+      with:
+        deploy_key: ${{ secrets.SSH_PRIVATE_KEY }}
+        publish_dir: ./target/wasm32-unknown-unknown/release
+
+# name: Deploy
+
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+
+# env:
+#   CARGO_TERM_COLOR: always
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - uses: actions/cache@v2
+#       with:
+#         path: |
+#           ~/.cargo/registry
+#           ~/.cargo/git
+#           target
+#         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+#     - uses: actions/checkout@v2
+#     - run: rustup target add wasm32-unknown-unknown
+#     - run: cargo install trunk
+#     - run: trunk build --release --public-url yew-static-pages
+#     - run: cp -r ./dist/ ./public/
+#     - uses: peaceiris/actions-gh-pages@v3
+#       if: ${{ github.ref == 'refs/heads/main' }}
+#       with:
+#         github_token: ${{ secrets.GITHUB_TOKEN }}
+#         publish_dir: ./public
